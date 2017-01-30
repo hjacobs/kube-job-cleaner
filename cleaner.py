@@ -29,7 +29,7 @@ for job in pykube.Job.objects(api, namespace=pykube.all):
     if job.obj['status'].get('succeeded') and completion_time:
         completion_time = parse_time(completion_time)
         seconds_since_completion = now - completion_time
-        if seconds_since_completion > 3600:
+        if seconds_since_completion > args.seconds:
             print('Deleting {} ({:.0f}s old)..'.format(job.name, seconds_since_completion))
             if args.dry_run:
                 print('** DRY RUN **')
