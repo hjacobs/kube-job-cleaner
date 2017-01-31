@@ -1,0 +1,5 @@
+======================
+Kubernetes Job Cleaner
+======================
+
+Very simple script to delete all completed jobs after X seconds (default: one hour).
