@@ -43,7 +43,7 @@ for pod in pykube.Pod.objects(api, namespace=pykube.all):
             if 'terminated' in container['state']:
                 if container['state']['terminated']['reason'] == 'Completed':
                     finish = now - parse_time(container['state']['terminated']['finishedAt'])
-                    if finish < seconds_since_completion:
+                    if seconds_since_completion == 0 or finish < seconds_since_completion:
                         seconds_since_completion = finish
         if seconds_since_completion > args.seconds:
             print('Deleting {} ({:.0f}s old)..'.format(pod.name, seconds_since_completion))
