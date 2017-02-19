@@ -36,4 +36,17 @@ for job in pykube.Job.objects(api, namespace=pykube.all):
             else:
                 job.delete()
 
-
+for pod in pykube.Pod.objects(api, namespace=pykube.all):
+    seconds_since_completion = 0
+    for container in pod.obj['status'].get('containerStatuses'):
+        if 'terminated' in container['state']:
+            if container['state']['terminated']['reason'] == 'Completed':
+                finish = now - parse_time(container['state']['terminated']['finishedAt'])
+                if finish < seconds_since_completion:
+                    seconds_since_completion = finish
+    if seconds_since_completion > args.seconds:
+        print('Deleting {} ({:.0f}s old)..'.format(pod.name, seconds_since_completion))
+        if args.dry_run:
+            print('** DRY RUN **')
+        else:
+            pod.delete()
