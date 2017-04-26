@@ -20,5 +20,5 @@ push: docker
 	docker push "$(IMAGE):$(TAG)"
 
 scm-source.json: .git
-	@echo '{"url": "$(GITURL)", "revision": "$(GITHEAD)", "author": "$(USER)", "status": "$(GITSTATUS)"}' > scm-source.json
+	@echo '{"url": "git:$(GITURL)", "revision": "$(GITHEAD)", "author": "$(USER)", "status": "$(GITSTATUS)"}' > scm-source.json
 

@@ -26,7 +26,8 @@ api = pykube.HTTPClient(config)
 now = time.time()
 for job in pykube.Job.objects(api, namespace=pykube.all):
     completion_time = job.obj['status'].get('completionTime')
-    if job.obj['status'].get('succeeded') and completion_time:
+    status = job.obj['status']
+    if (status.get('succeeded') or status.get('failed')) and completion_time:
         completion_time = parse_time(completion_time)
         seconds_since_completion = now - completion_time
         if seconds_since_completion > args.seconds:
@@ -41,10 +42,17 @@ for pod in pykube.Pod.objects(api, namespace=pykube.all):
         seconds_since_completion = 0
         for container in pod.obj['status'].get('containerStatuses'):
             if 'terminated' in container['state']:
-                if container['state']['terminated']['reason'] == 'Completed':
-                    finish = now - parse_time(container['state']['terminated']['finishedAt'])
-                    if seconds_since_completion == 0 or finish < seconds_since_completion:
-                        seconds_since_completion = finish
+                state = container['state']
+            elif 'terminated' in container.get('lastState', {}):
+                # current state might be "waiting", but lastState is good enough
+                state = container['lastState']
+            else:
+                state = None
+            if state:
+                finish = now - parse_time(state['terminated']['finishedAt'])
+                if seconds_since_completion == 0 or finish < seconds_since_completion:
+                    seconds_since_completion = finish
+
         if seconds_since_completion > args.seconds:
             print('Deleting {} ({:.0f}s old)..'.format(pod.name, seconds_since_completion))
             if args.dry_run:
