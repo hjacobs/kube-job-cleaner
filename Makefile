@@ -5,7 +5,7 @@ VERSION          ?= $(shell git describe --tags --always --dirty)
 TAG              ?= $(VERSION)
 GITHEAD          = $(shell git rev-parse --short HEAD)
 GITURL           = $(shell git config --get remote.origin.url)
-GITSTATU         = $(shell git status --porcelain || echo "no changes")
+GITSTATUS         = $(shell git status --porcelain || echo "no changes")
 
 default: docker
 
