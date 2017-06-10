@@ -40,6 +40,9 @@ for job in pykube.Job.objects(api, namespace=pykube.all):
 for pod in pykube.Pod.objects(api, namespace=pykube.all):
     if pod.obj['status'].get('phase') in ('Succeeded', 'Failed'):
         seconds_since_completion = 0
+        if pod.obj['status'].get('containerStatuses') is None:
+            print("Warning: Skipping pod without containers ({})".format(pod.obj['metadata'].get('name')))
+            continue
         for container in pod.obj['status'].get('containerStatuses'):
             if 'terminated' in container['state']:
                 state = container['state']
