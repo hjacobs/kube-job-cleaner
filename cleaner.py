@@ -12,7 +12,8 @@ def parse_time(s: str):
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--seconds', type=int, default=3600, help='Delete all jobs older than ..')
+parser.add_argument('--seconds', type=int, default=3600, help='Delete all finished jobs older than ..')
+parser.add_argument('--timeout-seconds', type=int, default=-1, help='Kill all jobs older than ..')
 parser.add_argument('--dry-run', action='store_true', help='Dry run mode')
 args = parser.parse_args()
 
@@ -36,6 +37,25 @@ for job in pykube.Job.objects(api, namespace=pykube.all):
                 print('** DRY RUN **')
             else:
                 job.delete()
+            continue
+    start_time = parse_time(job.obj['status'].get('startTime'))
+    seconds_since_start = now - start_time
+    annotations = job.obj['metadata'].get('annotations')
+    # Determine the timeout in seconds for this job
+    timeout_jobs = args.timeout_seconds
+    if annotations is not None:
+        timeout_override = annotations.get('cleanup-timeout')
+        if timeout_override is not None:
+            timeout_jobs = int(timeout_override)
+    # Check whether a timeout is active for this job.
+    if timeout_jobs < 0:
+        continue
+    if start_time and seconds_since_start > timeout_jobs:
+        print('Deleting Job because of timeout {} ({:.0f}s running)..'.format(job.name, seconds_since_start))
+        if args.dry_run:
+            print('** DRY RUN **')
+        else:
+            job.delete()
 
 for pod in pykube.Pod.objects(api, namespace=pykube.all):
     if pod.obj['status'].get('phase') in ('Succeeded', 'Failed'):
