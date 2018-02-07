@@ -28,6 +28,7 @@ now = time.time()
 for job in pykube.Job.objects(api, namespace=pykube.all):
     completion_time = job.obj['status'].get('completionTime')
     status = job.obj['status']
+
     if (status.get('succeeded') or status.get('failed')) and completion_time:
         completion_time = parse_time(completion_time)
         seconds_since_completion = now - completion_time
@@ -38,24 +39,25 @@ for job in pykube.Job.objects(api, namespace=pykube.all):
             else:
                 job.delete()
             continue
-    start_time = parse_time(job.obj['status'].get('startTime'))
-    seconds_since_start = now - start_time
-    annotations = job.obj['metadata'].get('annotations')
-    # Determine the timeout in seconds for this job
-    timeout_jobs = args.timeout_seconds
-    if annotations is not None:
-        timeout_override = annotations.get('cleanup-timeout')
-        if timeout_override is not None:
-            timeout_jobs = int(timeout_override)
-    # Check whether a timeout is active for this job.
-    if timeout_jobs < 0:
-        continue
-    if start_time and seconds_since_start > timeout_jobs:
-        print('Deleting Job because of timeout {} ({:.0f}s running)..'.format(job.name, seconds_since_start))
-        if args.dry_run:
-            print('** DRY RUN **')
-        else:
-            job.delete()
+
+    start_time = job.obj['status'].get('startTime')
+    if start_time:
+        seconds_since_start = now - parse_time(start_time)
+
+        # Determine the timeout in seconds for this job
+        annotations = job.obj['metadata'].get('annotations', {})
+        cleanup_timeout = int(annotations.get('cleanup-timeout', args.timeout_seconds))
+
+        # Check whether a timeout is active for this job.
+        if cleanup_timeout < 0:
+            continue
+
+        if start_time and seconds_since_start > cleanup_timeout:
+            print('Deleting Job because of timeout {} ({:.0f}s running)..'.format(job.name, seconds_since_start))
+            if args.dry_run:
+                print('** DRY RUN **')
+            else:
+                job.delete()
 
 for pod in pykube.Pod.objects(api, namespace=pykube.all):
     if pod.obj['status'].get('phase') in ('Succeeded', 'Failed'):
