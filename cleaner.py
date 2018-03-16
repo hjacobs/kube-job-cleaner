@@ -13,16 +13,24 @@ def parse_time(s: str):
 
 def job_expired(max_age, timeout_seconds, job):
     now = time.time()
-    completion_time = job.obj['status'].get('completionTime')
     status = job.obj['status']
 
-    if (status.get('succeeded') or status.get('failed')) and completion_time:
+    completion_time = None
+
+    if status.get('succeeded') or status.get('failed'):
+        completion_time = status.get('completionTime')
+    elif not status:
+        # this can happen if the image policy webhook prevents job pods
+        # from being created, fall back to creationTimestamp
+        completion_time = job.obj['metadata']['creationTimestamp']
+
+    if completion_time:
         completion_time = parse_time(completion_time)
         seconds_since_completion = now - completion_time
         if seconds_since_completion > max_age:
             return '{:.0f}s old'.format(seconds_since_completion)
 
-    start_time = job.obj['status'].get('startTime')
+    start_time = status.get('startTime')
     if start_time:
         seconds_since_start = now - parse_time(start_time)
 
