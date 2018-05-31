@@ -44,27 +44,34 @@ def job_expired(max_age, timeout_seconds, job):
 
 def pod_expired(max_age, pod):
     now = time.time()
-    if pod.obj['status'].get('phase') in ('Succeeded', 'Failed'):
-        seconds_since_completion = 0
-        if pod.obj['status'].get('containerStatuses') is None:
+    pod_status = pod.obj['status']
+
+    if pod_status.get('phase') in ('Succeeded', 'Failed'):
+        container_statuses = pod_status.get('containerStatuses', [])
+
+        if pod_status.get('reason') == 'Preempting':
+            # preempting pods don't have any container information, so let's remove them immediately
+            return 'preempted'
+        elif not container_statuses:
             print("Warning: Skipping pod without containers ({})".format(pod.obj['metadata'].get('name')))
             return
+        else:
+            seconds_since_completion = 0
+            for container in pod_status.get('containerStatuses'):
+                if 'terminated' in container['state']:
+                    state = container['state']
+                elif 'terminated' in container.get('lastState', {}):
+                    # current state might be "waiting", but lastState is good enough
+                    state = container['lastState']
+                else:
+                    state = None
+                if state:
+                    finish = now - parse_time(state['terminated']['finishedAt'])
+                    if seconds_since_completion == 0 or finish < seconds_since_completion:
+                        seconds_since_completion = finish
 
-        for container in pod.obj['status'].get('containerStatuses'):
-            if 'terminated' in container['state']:
-                state = container['state']
-            elif 'terminated' in container.get('lastState', {}):
-                # current state might be "waiting", but lastState is good enough
-                state = container['lastState']
-            else:
-                state = None
-            if state:
-                finish = now - parse_time(state['terminated']['finishedAt'])
-                if seconds_since_completion == 0 or finish < seconds_since_completion:
-                    seconds_since_completion = finish
-
-        if seconds_since_completion > max_age:
-            return '{:.0f}s old'.format(seconds_since_completion)
+            if seconds_since_completion > max_age:
+                return '{:.0f}s old'.format(seconds_since_completion)
 
 
 def delete_if_expired(dry_run, entity, reason):
