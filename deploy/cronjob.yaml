@@ -2,6 +2,7 @@ apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
   name: kube-job-cleaner
+  namespace: kube-job-cleaner
   labels:
     application: kube-job-cleaner
     version: "0.1"
@@ -15,10 +16,11 @@ spec:
             application: kube-job-cleaner
             version: "0.1"
         spec:
+          serviceAccountName: kube-job-cleaner
           restartPolicy: OnFailure
           containers:
           - name: cleaner
-            image: "hjacobs/kube-job-cleaner"
+            image: "hjacobs/kube-job-cleaner:0.7"
             resources:
               limits:
                 cpu: 200m
