@@ -30,3 +30,5 @@ There are a few options:
     Kill all jobs after X seconds (default: never)
 ``--dry-run``
     Do not actually remove any jobs, only print what would be done
+``--namespace``
+    Only search for (and clean) jobs in a single namespace
