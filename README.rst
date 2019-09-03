@@ -2,6 +2,8 @@
 Kubernetes Job Cleaner
 ======================
 
+**DEPRECATED: this script is no longer needed with recent Kubernetes versions (1.12+) as long as you use ttlSecondsAfterFinished**
+
 Very simple script to delete all completed jobs after X seconds (default: one hour).
 
 Kubernetes jobs are not cleaned up by default and completed pods are never deleted.
